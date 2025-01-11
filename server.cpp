@@ -18,14 +18,19 @@ enum {
     ATTR_MAX,
 };
 
-// Функция для обработки сообщений
 static int receive_message(struct nl_msg *msg, void *arg) {
-    // Получение полезной нагрузки
     struct nlmsghdr *nlh = nlmsg_hdr(msg);
     struct genlmsghdr *genl_hdr = (genlmsghdr *)nlmsg_data(nlh);
     struct nlattr *attrs[ATTR_MAX + 1];
 
-    genlmsg_parse(nlh, 0, attrs, ATTR_MAX, nullptr);
+    int ret = genlmsg_parse(nlh, 0, attrs, ATTR_MAX, nullptr);
+    if (ret < 0) {
+        std::cerr << "Failed to parse Generic Netlink message!" << std::endl;
+        return ret;
+    }
+
+    // Выводим номер seq
+    std::cout << "Received message with seq: " << nlh->nlmsg_seq << std::endl;
 
     if (attrs[ATTR_MSG]) {
         const char *data = nla_get_string(attrs[ATTR_MSG]);
@@ -49,6 +54,9 @@ int main() {
         std::cerr << "Failed to allocate Netlink socket!" << std::endl;
         return -1;
     }
+
+    //todo: наверное не самое хорошее решение но в данном случа оно не надо
+    nl_socket_disable_seq_check(sock);
 
     if (genl_connect(sock)) {
         std::cerr << "Failed to connect to Netlink!" << std::endl;
@@ -96,19 +104,17 @@ int main() {
     if (ret < 0) {
         std::cerr << "Failed to send message!" << std::endl;
     } else {
-        std::cout << "Message sent successfully." << std::endl;
+        struct nlmsghdr *nlh = nlmsg_hdr(msg);
+        std::cout << "Message sent successfully with seq: " << nlh->nlmsg_seq << std::endl;
     }
 
     nlmsg_free(msg);
 
-    // Ожидание ответов (здесь можно ожидать в цикле)
-    // std::cout << "Waiting for responses from kernel..." << std::endl;
-    // nl_recvmsgs_default(sock);
     std::cout << "Waiting for responses from kernel..." << std::endl;
     while (true) {
-        int ret = nl_recvmsgs_default(sock);
-        if (ret < 0) {
-            std::cerr << "Error receiving message: " << nl_geterror(ret) << std::endl;
+        int ret1 = nl_recvmsgs_default(sock);
+        if (ret1 < 0) {
+            std::cerr << "Error receiving message: " << nl_geterror(ret1) << std::endl;
             break;  // Выйти из цикла в случае ошибки, если необходимо
         }
     }

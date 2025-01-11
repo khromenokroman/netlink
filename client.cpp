@@ -98,7 +98,8 @@ int main() {
     if (ret < 0) {
         std::cerr << "[Client] Failed to send message!" << std::endl;
     } else {
-        std::cout << "[Client] Message sent successfully." << std::endl;
+        struct nlmsghdr *nlh = nlmsg_hdr(msg);
+        std::cout << "Message sent successfully with seq: " << nlh->nlmsg_seq << std::endl;
     }
 
     nlmsg_free(msg);
