@@ -71,7 +71,7 @@ int main() {
     json request_json;
     request_json["action"] = "add";
     request_json["arg1"] = 4;
-    request_json["arg"] = 5;
+    request_json["arg2"] = 5;
 
     struct nl_msg *msg = nlmsg_alloc();
     if (!msg) {
