@@ -8,7 +8,7 @@
 
 // Generic Netlink family name
 #define FAMILY_NAME "calc_family"
-#define COMMAND_PROCESS 1
+#define COMMAND_CLIENT 1
 
 using json = nlohmann::json; // Удобный псевдоним для библиотеки
 
@@ -64,9 +64,20 @@ int main() {
     }
     std::cout << "[Client] Preparing the Netlink message..." << std::endl;
 
-    genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0, COMMAND_PROCESS, 1);
+    if (!genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0, COMMAND_CLIENT, 1)) {
+        std::cerr << "[Client] Failed to create Netlink message header!" << std::endl;
+        nlmsg_free(msg);
+        nl_socket_free(sock);
+        return -1;
+    }
     std::cout << "[Client] Attaching JSON data to Netlink message..." << std::endl;
-    nla_put_string(msg, 1, request_json.dump().c_str());
+    // Добавляем атрибут с JSON
+    if (nla_put_string(msg, 1, request_json.dump().c_str())) {
+        std::cerr << "[Client] Failed to attach JSON payload!" << std::endl;
+        nlmsg_free(msg);
+        nl_socket_free(sock);
+        return -1;
+    }
 
     std::cout << "[Client] Sending Netlink message..." << std::endl;
     ret = nl_send_auto(sock, msg);
