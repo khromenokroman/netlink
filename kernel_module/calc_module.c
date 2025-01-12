@@ -61,8 +61,7 @@ static int __init calc_init(void) {
         pr_err("Failed to register Generic Netlink family \"%s\": %d\n", FAMILY_NAME, ret);
         return ret;
     }
-    pr_info("Generic Netlink family \"%s\" registered successfully with family ID: %d\n",
-            FAMILY_NAME, calc_family.id);
+    pr_info("Generic Netlink family \"%s\" registered successfully with family ID: %d\n", FAMILY_NAME, calc_family.id);
     return 0;
 }
 
@@ -83,8 +82,13 @@ MODULE_DESCRIPTION("Kernel module for Generic Netlink communication");
 MODULE_VERSION("1.0");
 
 static int send_message(const char *msg, int pid, int seq) {
-    struct sk_buff *skb;
-    void *hdr;
+    struct sk_buff *skb = NULL;
+    void *hdr = NULL;
+
+    if(!msg){
+        pr_err("Message is NULL, sending will be skipped\n");
+        return -EINVAL;
+    }
 
     if (pid == 0) {
         pr_err("Invalid PID specified.\n");
@@ -122,8 +126,9 @@ static int send_message(const char *msg, int pid, int seq) {
 }
 
 static int calc_cmd_client(struct sk_buff *skb, struct genl_info *info) {
-    struct nlattr *na;
-    char *msg;
+    struct nlattr *na = NULL;
+    char *msg = NULL;
+    char const *message_pass = "No server registered yet. Message will be dropped";
     int result = -EINVAL;
 
     na = info->attrs[ATTR_MSG];
@@ -132,6 +137,7 @@ static int calc_cmd_client(struct sk_buff *skb, struct genl_info *info) {
         return result;
     }
 
+    //@todo: не самое хорошее решение, сходу не могу придумать, как красиво сделать
     pid_client = info->snd_portid;
     seq_client = nlmsg_hdr(skb)->nlmsg_seq;
     pr_info("Registered client with PID %d and sequence number %d\n", pid_client, seq_client);
@@ -145,16 +151,22 @@ static int calc_cmd_client(struct sk_buff *skb, struct genl_info *info) {
             pr_err("Failed to forward client message to server. Error: %d\n", result);
         }
     } else {
-        pr_info("No server registered yet. Message will be dropped\n");
+        pr_info("%s\n", message_pass);
+        result = send_message(message_pass, pid_client, seq_client);
+        if (result != 0) {
+            pr_err("Failed to sending error message. Error: %d\n", result);
+        }
         result = 0;
     }
 
     return result;
 }
 
+//@todo: из описания задания не понятно как надо обрабатывать разрыв соединия,
+// в текущей реализации надо выгружать и загружать модуль ядра, если сервер разъединился
 static int calc_cmd_server(struct sk_buff *skb, struct genl_info *info) {
-    struct nlattr *na;
-    char *msg;
+    struct nlattr *na = NULL;
+    char *msg = NULL;
     int result = -EINVAL;
 
     na = info->attrs[ATTR_MSG];
@@ -165,6 +177,7 @@ static int calc_cmd_server(struct sk_buff *skb, struct genl_info *info) {
 
     msg = nla_data(na);
 
+    //@todo: не самое хорошее решение, сходу не могу придумать, как красиво сделать
     if (pid_server == 0) {
         pid_server = info->snd_portid;
         seq_server = nlmsg_hdr(skb)->nlmsg_seq;

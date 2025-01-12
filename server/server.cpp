@@ -1,5 +1,6 @@
 #include "server.hpp"
 
+//@todo: не нравиться что логирование и исключение надо что то одно оставить, сделать красиво надо
 netlink::server::Server::Server() {
     openlog("NetlinkServer", LOG_PID | LOG_CONS, LOG_USER);
     syslog(LOG_INFO, "Starting the Netlink server");
@@ -25,6 +26,7 @@ netlink::server::Server::Server() {
 
     nl_socket_modify_cb(m_sock, NL_CB_MSG_IN, NL_CB_CUSTOM, receive_message, this);
 
+    //@todo: не было полного описания задачи, поэтому пока так
     nlohmann::json request_json;
     request_json["message"] = "Hello";
 
@@ -33,6 +35,7 @@ netlink::server::Server::Server() {
 
 netlink::server::Server::~Server() {
     syslog(LOG_INFO, "Shutting down the Netlink server");
+    //@todo: переделать на uniq
     nl_socket_free(m_sock);
     closelog();
 }
@@ -61,6 +64,8 @@ int netlink::server::Server::receive_message(struct nl_msg *msg, void *arg) {
             }
         } catch (std::exception &ex) {
             syslog(LOG_ERR, "Error occurred: %s", ex.what());
+            //@todo@: тут может быть проблема, для быстроты реализации пока так
+            static_cast<Server *>(arg)->send_message(ex.what());
             return NL_OK;
         }
 
