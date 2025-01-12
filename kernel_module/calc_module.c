@@ -187,12 +187,17 @@ static int calc_cmd_server(struct sk_buff *skb, struct genl_info *info) {
         if (result != 0) {
             pr_err("Failed sending message. Error: %d\n", result);
         } else {
-            pr_info("Successfully sending client message.\n");
+            pr_info("Successfully sending to server message.\n");
         }
         return result;
     } else {
-        pr_info("Message from already-registered server.\n");
-        // Можно дополнительно обработать, если нужно
+        result = send_message(msg, pid_client, seq_client);
+        if (result != 0) {
+            pr_err("Failed sending message to client. Error: %d\n", result);
+        } else {
+            pr_info("Successfully sending message to client.\n");
+        }
+        return result;
     }
 
     return result;
