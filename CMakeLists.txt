@@ -11,6 +11,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBNL REQUIRED libnl-3.0 libnl-genl-3.0)
 
+# Добавляем библиотеку GTest
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
+
+# Тесты
+add_executable(tests tests/test.cpp server/server.cpp)
+
+# Линковка библиотек
+target_link_libraries(tests ${LIBNL_LIBRARIES} ${GTEST_LIBRARIES} pthread gtest_main)
+
+# Тестовый таргет
+enable_testing()
+add_test(NAME run_all_tests COMMAND tests)
+
 # Путь к заголовкам
 include_directories(
         ${LIBNL_INCLUDE_DIRS}

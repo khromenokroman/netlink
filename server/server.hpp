@@ -13,6 +13,9 @@ static_assert(sizeof(int) == 4);
 
 //@todo: по хорошему надо сделать свои исключения
 //@todo: по хорошему надо сделать свой логгер
+namespace tests {
+class ServerTest_Friend;
+}
 
 namespace netlink::server {
 
@@ -22,6 +25,8 @@ enum class ATTR : int {
     ATTR_MAX,
 };
 
+/* для тестов, так себе решение */
+
 class Server final {
    public:
     Server();
@@ -30,7 +35,7 @@ class Server final {
     Server &operator=(Server const &) = delete;
     Server &operator=(Server &&) = delete;
     ~Server();
-
+    friend class tests::ServerTest_Friend;
     void wait_for_response();
 
    private:
