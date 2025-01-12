@@ -5,3 +5,12 @@ all:
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+load:
+	insmod calc_module.ko
+
+unload:
+	rmmod calc_module
+
+check:
+	lsmod | grep calc
