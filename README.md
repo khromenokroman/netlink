@@ -32,3 +32,14 @@ cd ../build
 ./server
 ./client
 ````
+
+Как это работает
+![work](video/work_app.gif)
+
+В хорошем качестве `video/work_app.mp4`
+
+чтобы сделать gif
+````bash
+apt install ffmpeg
+ffmpeg -i video/work_app.mp4 -vf "fps=15,scale=2048:-1:flags=lanczos" -c:v gif video/work_app.gif
+````
