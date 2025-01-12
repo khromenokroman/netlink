@@ -29,14 +29,14 @@ static const struct nla_policy calc_policy[ATTR_MAX + 1] = {
 
 static const struct genl_ops calc_ops[] = {
     {
-        .cmd = COMMAND_CLIENT, // Обработчик клиента
+        .cmd = COMMAND_CLIENT,
         .flags = 0,
         .policy = calc_policy,
         .doit = calc_cmd_client,
         .dumpit = NULL,
     },
     {
-        .cmd = COMMAND_SERVER, // Обработчик сервера
+        .cmd = COMMAND_SERVER,
         .flags = 0,
         .policy = calc_policy,
         .doit = calc_cmd_server,
@@ -48,30 +48,30 @@ static struct genl_family calc_family = {
     .version = 1,
     .maxattr = 1,
     .module = THIS_MODULE,
-    .ops = calc_ops,               // Указываем зарегистрированные операции
-    .n_ops = ARRAY_SIZE(calc_ops), // Количество операций
+    .ops = calc_ops,
+    .n_ops = ARRAY_SIZE(calc_ops),
 };
 static int __init calc_init(void) {
     int ret;
 
-    pr_info("Initializing calc_family...\n");
+    pr_info("Initializing Generic Netlink family \"%s\"\n", FAMILY_NAME);
 
     ret = genl_register_family(&calc_family);
     if (ret) {
-        pr_err("Failed to register Generic Netlink family: %d\n", ret);
+        pr_err("Failed to register Generic Netlink family \"%s\": %d\n", FAMILY_NAME, ret);
         return ret;
     }
-    pr_info("\"%s\" registered with family ID: %d\n", FAMILY_NAME, calc_family.id);
-
-    pr_info("\"%s\" initialized successfully.\n", FAMILY_NAME);
+    pr_info("Generic Netlink family \"%s\" registered successfully with family ID: %d\n",
+            FAMILY_NAME, calc_family.id);
     return 0;
 }
+
 static void __exit calc_exit(void) {
-    pr_info("Exiting calc_family...\n");
+    pr_info("Unregistering Generic Netlink family \"%s\"\n", FAMILY_NAME);
 
     genl_unregister_family(&calc_family);
 
-    pr_info("[Kernel] calc_family exited successfully.\n");
+    pr_info("Generic Netlink family \"%s\" unregistered successfully\n", FAMILY_NAME);
 }
 
 module_init(calc_init);
@@ -79,39 +79,33 @@ module_exit(calc_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Khromenok Roman");
-MODULE_DESCRIPTION("Kernel module for Generic Netlink communication.");
+MODULE_DESCRIPTION("Kernel module for Generic Netlink communication");
 MODULE_VERSION("1.0");
 
 static int send_message(const char *msg, int pid, int seq) {
     struct sk_buff *skb;
     void *hdr;
 
-    // Проверка PID
     if (pid == 0) {
-        pr_err("Not valid PID.\n");
+        pr_err("Invalid PID specified.\n");
         return -EINVAL;
     }
 
-    pr_info("Sending message: %s to %d seq %d\n", msg, pid, seq);
-
-    // Создание нового сообщения
     skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
     if (!skb) {
-        pr_err("Failed to allocate new sk_buff.\n");
+        pr_err("Failed to allocate sk_buff.\n");
         return -ENOMEM;
     }
 
-    // Создаем заголовок Generic Netlink
     hdr = genlmsg_put(skb, 0, seq, &calc_family, 0, COMMAND_SERVER);
     if (!hdr) {
-        pr_err("Failed to create genlmsg header.\n");
+        pr_err("Failed to create Generic Netlink header.\n");
         kfree_skb(skb);
         return -ENOMEM;
     }
 
-    // Добавляем полезные данные
     if (nla_put_string(skb, ATTR_MSG, msg)) {
-        pr_err("Failed to add message payload to genlmsg.\n");
+        pr_err("Failed to add message payload.\n");
         kfree_skb(skb);
         return -EMSGSIZE;
     }
@@ -120,9 +114,9 @@ static int send_message(const char *msg, int pid, int seq) {
 
     int ret = genlmsg_unicast(&init_net, skb, pid);
     if (ret) {
-        pr_err("Failed sending message. Error: %d\n", ret);
+        pr_err("Failed to send message to PID %d, seq %d. Error: %d\n", pid, seq, ret);
     } else {
-        pr_info("Sended message to %d with seq %d\n", pid, seq);
+        pr_info("Message sent to PID %d with sequence number %d\n", pid, seq);
     }
     return ret;
 }
@@ -132,30 +126,26 @@ static int calc_cmd_client(struct sk_buff *skb, struct genl_info *info) {
     char *msg;
     int result = -EINVAL;
 
-    pr_info("Client receiving message. Processing...\n");
-
     na = info->attrs[ATTR_MSG];
     if (!na) {
-        pr_err("Received message with no payload.\n");
+        pr_err("Received a message with no payload.\n");
         return result;
     }
 
-    pid_client = info->snd_portid;          // Обновляем PID клиента
-    seq_client = nlmsg_hdr(skb)->nlmsg_seq; // Сохраняем seq клиента
-    pr_info("Set PID Client: %d with seq: %d\n", pid_client, seq_client);
+    pid_client = info->snd_portid;
+    seq_client = nlmsg_hdr(skb)->nlmsg_seq;
+    pr_info("Registered client with PID %d and sequence number %d\n", pid_client, seq_client);
 
     msg = nla_data(na);
-    pr_info("Received message from client (PID %d): %s\n", pid_client, msg);
+    pr_info("Message from client (PID %d): %s\n", pid_client, msg);
 
     if (pid_server != 0) {
         result = send_message(msg, pid_server, seq_server);
         if (result != 0) {
-            pr_err("Failed sending message. Error: %d\n", result);
-        } else {
-            pr_info("Successfully sending client message.\n");
+            pr_err("Failed to forward client message to server. Error: %d\n", result);
         }
     } else {
-        pr_info("Server not connected\n");
+        pr_info("No server registered yet. Message will be dropped\n");
         result = 0;
     }
 
@@ -167,38 +157,31 @@ static int calc_cmd_server(struct sk_buff *skb, struct genl_info *info) {
     char *msg;
     int result = -EINVAL;
 
-    pr_info("Server receiving message. Processing...\n");
-
     na = info->attrs[ATTR_MSG];
     if (!na) {
-        pr_err("Received message with no payload.\n");
+        pr_err("Received a message with no payload.\n");
         return result;
     }
 
     msg = nla_data(na);
-    pr_info("Received message from server (msg payload): %s\n", msg);
 
-    // Сохранение номера seq только для регистрации
     if (pid_server == 0) {
-        pid_server = info->snd_portid;          // Первый PID сервер отправил для регистрации
-        seq_server = nlmsg_hdr(skb)->nlmsg_seq; // Сохраняем seq сервера для дальнейшего использования
-        pr_info("Set PID Server to %d with seq = %d\n", pid_server, seq_server);
+        pid_server = info->snd_portid;
+        seq_server = nlmsg_hdr(skb)->nlmsg_seq;
+        pr_info("Registered server with PID %d and sequence number %d\n", pid_server, seq_server);
+
         result = send_message(msg, pid_server, seq_server);
-        if (result != 0) {
-            pr_err("Failed sending message. Error: %d\n", result);
-        } else {
-            pr_info("Successfully sending to server message.\n");
+        if (result) {
+            pr_err("Failed to send initial server message. Error: %d\n", result);
         }
         return result;
     } else {
         result = send_message(msg, pid_client, seq_client);
-        if (result != 0) {
-            pr_err("Failed sending message to client. Error: %d\n", result);
+        if (result) {
+            pr_err("Failed to forward server message to client. Error: %d\n", result);
         } else {
-            pr_info("Successfully sending message to client.\n");
+            pr_info("Message from server forwarded to client.\n");
         }
         return result;
     }
-
-    return result;
 }

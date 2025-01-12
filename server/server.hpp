@@ -2,12 +2,12 @@
 #include <netlink/genl/ctrl.h>
 #include <netlink/genl/genl.h>
 #include <netlink/netlink.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include <cstdlib>
 #include <cstring>
 #include <nlohmann/json.hpp>
-#include <syslog.h>
 
 static_assert(sizeof(int) == 4);
 
