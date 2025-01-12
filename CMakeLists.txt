@@ -11,11 +11,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBNL REQUIRED libnl-3.0 libnl-genl-3.0)
 
-# Пути для nlohmann/json
-# Если вы клонировали репозиторий, укажите путь до заголовочного файла json.hpp
-# В случае установки библиотеки через пакетный менеджер (например, vcpkg) это можно настроить автоматически
-find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp REQUIRED)
-
 # Указываем путь к заголовкам
 include_directories(
         ${LIBNL_INCLUDE_DIRS}
@@ -26,7 +21,7 @@ include_directories(
 link_directories(${LIBNL_LIBRARY_DIRS})
 
 # Добавляем клиент и сервер
-add_executable(server server.cpp)
+add_executable(server server/app.cpp server/server.cpp)
 add_executable(client client.cpp)
 
 # Линкуем libnl к клиенту и серверу
