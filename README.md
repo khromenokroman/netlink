@@ -10,6 +10,10 @@
 { "result": 9 }
 Возможные действия (action): add, sub, mul
 ````
+#### Зависимости
+````bash
+apt install nlohmann-json3-dev libgtest-dev libnl-3-dev libnl-genl-3-dev
+````
 
 #### Сборка
 Модуль ядра
