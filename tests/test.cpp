@@ -51,10 +51,7 @@ TEST(ServerTests, ProcessMissingActionField) {
 
     std::string invalid_request = R"({"arg1": 3, "arg2": 5})";
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        std::runtime_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), std::runtime_error);
 }
 
 // Тест: Некорректное действие (неизвестное значение "action")
@@ -63,10 +60,7 @@ TEST(ServerTests, ProcessUnknownAction) {
 
     std::string invalid_request = R"({"action": "div", "arg1": 10, "arg2": 2})";
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        std::runtime_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), std::runtime_error);
 }
 
 // Тест: Некорректный JSON (синтаксическая ошибка)
@@ -75,10 +69,7 @@ TEST(ServerTests, ProcessInvalidJson) {
 
     std::string invalid_request = R"({"action": "add", "arg1": 3, "arg2": )"; // Неполный JSON
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        nlohmann::json::parse_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), nlohmann::json::parse_error);
 }
 
 // Тест: Некорректные аргументы (отсутствует "arg1")
@@ -87,10 +78,7 @@ TEST(ServerTests, ProcessMissingArg1Field) {
 
     std::string invalid_request = R"({"action": "add", "arg2": 5})";
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        std::runtime_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), std::runtime_error);
 }
 
 // Тест: Некорректные аргументы (отсутствует "arg2")
@@ -99,10 +87,7 @@ TEST(ServerTests, ProcessMissingArg2Field) {
 
     std::string invalid_request = R"({"action": "add", "arg1": 3})";
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        std::runtime_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), std::runtime_error);
 }
 
 // Тест: Неподдерживаемый тип аргументов (строка вместо числа)
@@ -111,10 +96,7 @@ TEST(ServerTests, ProcessInvalidArgType) {
 
     std::string invalid_request = R"({"action": "add", "arg1": "three", "arg2": 5})";
 
-    EXPECT_THROW(
-        tests::ServerTest_Friend::test_process_request(server, invalid_request),
-        nlohmann::json::type_error
-    );
+    EXPECT_THROW(tests::ServerTest_Friend::test_process_request(server, invalid_request), nlohmann::json::type_error);
 }
 
 // Тест: Аргументы равны нулю (пограничный случай)

@@ -22,7 +22,11 @@ make
 cd ..
 mkdir -p build && cd build
 cmake ..
-cmake --build .
+cmake --build . --target all -j 18
+````
+#### Тесты
+````bash
+./tests
 ````
 #### Запуск
 ````bash
