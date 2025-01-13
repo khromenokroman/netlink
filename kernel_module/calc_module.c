@@ -7,49 +7,113 @@
 #define COMMAND_CLIENT 1
 #define COMMAND_SERVER 2
 
+/**
+ * @brief Определение атрибутов для Generic Netlink.
+ *
+ * Содержит список атрибутов, используемых в Netlink-сообщениях.
+ */
 enum {
-    ATTR_UNSPEC,
-    ATTR_MSG,
-    __ATTR_MAX,
+    ATTR_UNSPEC, /**< Неопределенный атрибут, используется как заглушка. */
+    ATTR_MSG,    /**< Основной атрибут, содержащий полезную нагрузку сообщения (строка). */
+    __ATTR_MAX,  /**< Максимальное значение для атрибутов (служебный элемент). */
 };
-#define ATTR_MAX (__ATTR_MAX - 1)
+#define ATTR_MAX (__ATTR_MAX - 1) /**< Корректное определение верхней границы атрибутов. */
 
 static __u32 pid_client = 0;
 static __u32 pid_server = 0;
 static int seq_client = 0;
 static int seq_server = 0;
 
+/**
+ * @brief Отправляет сообщение через Netlink.
+ *
+ * Создает сообщение с указанной полезной нагрузкой, PID и номером последовательности,
+ * а затем отправляет его через Generic Netlink.
+ *
+ * @param msg Строка с сообщением, которое нужно отправить.
+ * @param pid PID получателя сообщения.
+ * @param seq Номер последовательности для сообщения.
+ *
+ * @return 0 при успешной отправке, отрицательное значение кода ошибки в случае сбоя.
+ */
 static int send_message(const char *msg, int pid, int seq);
+/**
+ * @brief Обработчик команд от клиента.
+ *
+ * Обрабатывает сообщения, полученные от клиента, и перенаправляет их серверу
+ * (если сервер зарегистрирован). Если сервер не зарегистрирован, отправляется сообщение об ошибке клиенту.
+ *
+ * @param skb Указатель на структуру sk_buff, содержащую сообщение.
+ * @param info Структура, содержащая информацию о параметрах сообщения.
+ *
+ * @return 0 при успешной обработке, отрицательное значение кода ошибки в случае сбоя.
+ */
 static int calc_cmd_client(struct sk_buff *skb, struct genl_info *info);
+/**
+ * @brief Обработчик команд от сервера.
+ *
+ * Обрабатывает сообщения, полученные от сервера, и отправляет их клиенту
+ * (если клиент зарегистрирован). Если сервер еще не зарегистрирован,
+ * он регистрируется и сообщение отправляется самому серверу.
+ *
+ * @param skb Указатель на структуру sk_buff, содержащую сообщение.
+ * @param info Структура, содержащая информацию о параметрах сообщения.
+ *
+ * @return 0 при успешной обработке, отрицательное значение кода ошибки в случае сбоя.
+ */
 static int calc_cmd_server(struct sk_buff *skb, struct genl_info *info);
 
+/**
+ * @brief Политика проверки атрибутов для Generic Netlink.
+ *
+ * Определяет правила валидации атрибутов, которые используются в сообщениях Netlink.
+ * Здесь задается тип и ограничения атрибута `ATTR_MSG`.
+ */
+static const struct nla_policy calc_policy[ATTR_MAX + 1] = {
+    [ATTR_MSG] =
+        {
+            .type = NLA_STRING, /**< Тип атрибута - строка. */
+            .len = 1024,        /**< Максимальная длина строки - 1024 байта. */
+        },
+};
 static const struct nla_policy calc_policy[ATTR_MAX + 1] = {
     [ATTR_MSG] = {.type = NLA_STRING, .len = 1024},
 };
 
+/**
+ * @brief Список операций для Generic Netlink.
+ *
+ * Определяет команды и соответствующие обработчики (doit) для клиента и сервера.
+ */
 static const struct genl_ops calc_ops[] = {
     {
-        .cmd = COMMAND_CLIENT,
-        .flags = 0,
-        .policy = calc_policy,
-        .doit = calc_cmd_client,
-        .dumpit = NULL,
+        .cmd = COMMAND_CLIENT,   /**< Команда для обработки сообщений клиента. */
+        .flags = 0,              /**< Флаги для команды (нет специальных флагов). */
+        .policy = calc_policy,   /**< Политика валидации атрибутов команды. */
+        .doit = calc_cmd_client, /**< Указатель на функцию-обработчик команды клиента. */
+        .dumpit = NULL,          /**< Поле для функции выгрузки (не используется). */
     },
     {
-        .cmd = COMMAND_SERVER,
-        .flags = 0,
-        .policy = calc_policy,
-        .doit = calc_cmd_server,
-        .dumpit = NULL,
+        .cmd = COMMAND_SERVER,   /**< Команда для обработки сообщений сервера. */
+        .flags = 0,              /**< Флаги для команды (нет специальных флагов). */
+        .policy = calc_policy,   /**< Политика валидации атрибутов команды. */
+        .doit = calc_cmd_server, /**< Указатель на функцию-обработчик команды сервера. */
+        .dumpit = NULL,          /**< Поле для функции выгрузки (не используется). */
     },
 };
+
+/**
+ * @brief Описание семейства Generic Netlink.
+ *
+ * Определяет параметры семейства Netlink (имя, версию, операции, и пр.).
+ */
 static struct genl_family calc_family = {
-    .name = FAMILY_NAME,
-    .version = 1,
-    .maxattr = 1,
-    .module = THIS_MODULE,
-    .ops = calc_ops,
-    .n_ops = ARRAY_SIZE(calc_ops),
+    .name = FAMILY_NAME,           /**< Название семейства Netlink. */
+    .version = 1,                  /**< Версия семейства Netlink. */
+    .maxattr = ATTR_MAX,           /**< Максимальное количество поддерживаемых атрибутов. */
+    .module = THIS_MODULE,         /**< Указатель на текущий модуль ядра. */
+    .ops = calc_ops,               /**< Список операций (команд), поддерживаемых семейством. */
+    .n_ops = ARRAY_SIZE(calc_ops), /**< Количество операций, объявленных в calc_ops. */
 };
 static int __init calc_init(void) {
     int ret;
@@ -85,7 +149,7 @@ static int send_message(const char *msg, int pid, int seq) {
     struct sk_buff *skb = NULL;
     void *hdr = NULL;
 
-    if(!msg){
+    if (!msg) {
         pr_err("Message is NULL, sending will be skipped\n");
         return -EINVAL;
     }
